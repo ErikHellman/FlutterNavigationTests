@@ -3,6 +3,7 @@ import 'package:navigation_tests/chat_list.dart';
 import 'package:navigation_tests/chat_messages.dart';
 import 'package:navigation_tests/models/chat.dart';
 import 'package:navigation_tests/models/user.dart';
+import 'package:navigation_tests/navigator_service.dart';
 import 'package:navigation_tests/spotlight_feed.dart';
 import 'package:navigation_tests/user_details.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +21,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<ChatModel>(create: (_) => ChatModel()),
       ],
       child: MaterialApp(
+        navigatorKey: NavigatorService.rootKey,
         title: 'Flutter Navigation Tests',
         theme: ThemeData(
           primarySwatch: Colors.blue,
@@ -29,9 +31,10 @@ class MyApp extends StatelessWidget {
           return MaterialPageRoute(builder: (context) {
             switch (settings.name) {
               case '/':
+              case '/chat':
                 return HomeScreen();
               default:
-                return ErrorScreen();
+                return ErrorScreen('In root: ${settings.name}');
             }
           });
         },
@@ -41,6 +44,10 @@ class MyApp extends StatelessWidget {
 }
 
 class ErrorScreen extends StatelessWidget {
+  final String message;
+
+  ErrorScreen(this.message);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,10 +55,22 @@ class ErrorScreen extends StatelessWidget {
         title: Text('Error!'),
       ),
       body: Center(
-        child: Text(
-          'Something went wrong!',
-          style: Theme.of(context).textTheme.headline3.copyWith(color: Colors.red),
-          textAlign: TextAlign.center,
+        child: Column(
+          children: <Widget>[
+            Text(
+              'Something went wrong:',
+              style: Theme.of(context)
+                  .textTheme
+                  .headline6
+                  .copyWith(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.subtitle1,
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
@@ -64,44 +83,46 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  var _currentIndex = 2;
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: <Widget>[
-          SearchScreen(),
-          ChatScreen(),
-          SpotlightScreen(),
-          NotificationsScreen(),
-          ProfileScreen()
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          type: BottomNavigationBarType.fixed,
-          showUnselectedLabels: false,
-          showSelectedLabels: false,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          items: [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.search), title: Text('Search')),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.chat), title: Text('Chat')),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.star), title: Text('Spotlight')),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.notifications), title: Text('Notifications')),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.person), title: Text('Profile')),
-          ]),
-    );
+    return StreamBuilder<int>(
+        stream: NavigatorService.currentIndex,
+        builder: (context, snapshot) {
+          final index = snapshot.data ?? 2;
+          return Scaffold(
+            body: IndexedStack(
+              index: index,
+              children: [
+                SearchScreen(),
+                ChatScreen(),
+                SpotlightScreen(),
+                NotificationsScreen(),
+                ProfileScreen()
+              ],
+            ),
+            bottomNavigationBar: BottomNavigationBar(
+                currentIndex: index,
+                type: BottomNavigationBarType.fixed,
+                showUnselectedLabels: false,
+                showSelectedLabels: false,
+                onTap: (index) {
+                  NavigatorService.newIndex = index;
+                },
+                items: [
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.search), title: Text('Search')),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.chat), title: Text('Chat')),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.star), title: Text('Spotlight')),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.notifications),
+                      title: Text('Notifications')),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.person), title: Text('Profile')),
+                ]),
+          );
+        });
   }
 }
 
@@ -129,6 +150,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Navigator(
+      key: NavigatorService.chatKey,
       initialRoute: '/',
       onGenerateRoute: (settings) {
         return MaterialPageRoute(builder: (context) {
@@ -138,7 +160,7 @@ class _ChatScreenState extends State<ChatScreen> {
             case '/chat':
               return ChatMessages(settings.arguments as Chat);
             default:
-              return ErrorScreen();
+              return ErrorScreen('In Chat: ${settings.name}');
           }
         });
       },
@@ -155,6 +177,7 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
   @override
   Widget build(BuildContext context) {
     return Navigator(
+      key: NavigatorService.spotlightKey,
       initialRoute: '/',
       onGenerateRoute: (settings) {
         return MaterialPageRoute(builder: (context) {
@@ -164,7 +187,7 @@ class _SpotlightScreenState extends State<SpotlightScreen> {
             case '/user':
               return UserDetails(settings.arguments as User);
             default:
-              return ErrorScreen();
+              return ErrorScreen('In spotlight: ${settings.name}');
           }
         });
       },
